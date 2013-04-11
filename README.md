@@ -1,4 +1,4 @@
-mooc-caltech-learning-from-data
-===============================
+MOOC - Caltech - Learning From Data
+===================================
 
-Source code used for the exercises.
+See also: http://work.caltech.edu/telecourse.html

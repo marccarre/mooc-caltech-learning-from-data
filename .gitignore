@@ -1,3 +1,6 @@
+# OS/IDE Files #
+.DS_Store
+
 *.py[cod]
 
 # C extensions
