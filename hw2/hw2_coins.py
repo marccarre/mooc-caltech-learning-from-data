@@ -28,6 +28,6 @@ def runSimulation(numSimulations = 100000, numCoins = 1000, numFlips = 10):
 
 print('Started coins simulation...')
 nuFirst, nuRand, nuMin = runSimulation()
-print('Average first = %0.4f' % np.average(nuFirst)) # Average first = 0.4998
-print('Average rand = %0.4f' % np.average(nuRand))   # Average rand = 0.4994
-print('Average min = %0.4f' % np.average(nuMin))     # Average min = 0.0373
+print('Average first coin: %0.5f' % np.average(nuFirst))
+print('Average rand coin:  %0.5f' % np.average(nuRand))
+print('Average min coin:   %0.5f' % np.average(nuMin))

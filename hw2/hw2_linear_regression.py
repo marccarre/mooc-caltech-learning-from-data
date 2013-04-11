@@ -48,7 +48,7 @@ def runSimulations(numSimulations, N, N_test):
 
         # Estimate target hypothesis and calculate in-sample error:
         g = np.vectorize(sign)(np.dot(X,w))
-        E_in = np.average(g - y)
+        E_in = np.average(y - g)
         E_ins += [E_in]
 
         # Generate testing data-set:
@@ -57,13 +57,14 @@ def runSimulations(numSimulations, N, N_test):
 
         # Apply target hypothese and calculate out-of-sample error:
         g_test = np.vectorize(sign)(np.dot(X_test,w))
-        E_out = np.average(g_test - y_test)
+        E_out = np.average(y_test - g_test)
         E_outs += [E_out]
 
         if (i == (numSimulations - 1)):
             plot(X, y, x1, x2, y1, y2)
     return (E_ins, E_outs)
 
+print('Started linear regression simulation...')
 E_ins, E_outs = runSimulations(numSimulations, N, N_test)
 E_in_avg = np.average(E_ins)
 E_out_avg = np.average(E_outs)
