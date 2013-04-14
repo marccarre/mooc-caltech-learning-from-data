@@ -47,7 +47,7 @@ def runSimulations(numSimulations, N, N_test):
         w = np.dot(X_dagger, y)
 
         # Estimate target hypothesis and calculate in-sample error:
-        g = np.vectorize(sign)(np.dot(X,w))
+        g = np.vectorize(sign)(np.dot(X, w))
         E_in = np.average(y - g)
         E_ins += [E_in]
 
@@ -61,8 +61,36 @@ def runSimulations(numSimulations, N, N_test):
         E_outs += [E_out]
 
         if (i == (numSimulations - 1)):
+            # Apply PLA after having calculated w using linear regression (which should speed up convergence):
+            perceptronLearningAlgorithm(1000, 10, x1, x2, y1, y2, w)
+            
+            # Plot classification boundary and points:
             plot(X, y, x1, x2, y1, y2)
+
     return (E_ins, E_outs)
+
+def perceptronLearningAlgorithm(numSimulations, N, x1, x2, y1, y2, w = None, maxIter = 10):
+    print('Started running PLA...')
+    iters = []
+    for _ in xrange(numSimulations):
+        # Generate data-set:
+        X = (b - a) * np.random.rand(N, d) + a
+        y = np.array([label(X[j], x1, x2, y1, y2) for j in xrange(N)])
+
+        hasMisclassifiedSample = True
+        iter = 0
+        while (hasMisclassifiedSample and (iter < maxIter)):
+            hasMisclassifiedSample = False
+            for i in xrange(X.shape[0]):
+                if (y[i] != sign(np.dot(X[i], w))):
+                    hasMisclassifiedSample = True
+                    w = w + y[i] * X[i]
+            iter += 1
+        iters += [iter]
+    avg_iter = np.average(iters)
+    print('PLA converged in %0.5f iterations (for %i runs)' % (avg_iter, numSimulations))
+    print('PLA convergence overview: %s' % iters)
+    return iters
 
 print('Started linear regression simulation...')
 E_ins, E_outs = runSimulations(numSimulations, N, N_test)
