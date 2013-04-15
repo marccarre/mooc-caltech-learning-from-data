@@ -1,7 +1,7 @@
 from __future__ import division
 import sys
 import numpy as np
-from numpy import linalg
+from numpy import linalg, sign
 import matplotlib.pyplot as plt
 
 print(sys.version + '\n')
@@ -13,20 +13,17 @@ a = -1.0 # lower bound for X
 b = 1.0 # upper bound for X
 numSimulations = 1000
 
-def sign(xp):
-    return 1.0 if (xp > 0) else -1.0
-
-def label(X, x1, x2, y1, y2):
-    xp = (x2 - x1) * (y2 - X[1]) - (y2 - y1) * (x2 - X[0])
-    return sign(xp)
+def f(X, p1, p2):
+    z = np.cross(p2-p1, p2-X)
+    return sign(z[0])
     
-def plot(X, y, x1, x2, y1, y2):
+def plot(X, y, p1, p2):
     plt.axis([-1.1, 1.1, -1.1, 1.1])
-    plt.plot([x1,x2], [y1,y2],color='r')
+    plt.plot([p1[1],p2[1]], [p1[2],p2[2]],color='r')
     pos = np.array([X[i] for i in xrange(N) if y[i] == 1.0])
     neg = np.array([X[i] for i in xrange(N) if y[i] == -1.0])
-    plt.plot(pos[:,0], pos[:,1], 'o')
-    plt.plot(neg[:,0], neg[:,1], 'x')
+    plt.plot(pos[:,1], pos[:,2], 'o')
+    plt.plot(neg[:,1], neg[:,2], 'x')
     plt.show()
 
 def runSimulations(numSimulations, N, N_test):
@@ -35,12 +32,12 @@ def runSimulations(numSimulations, N, N_test):
     for i in xrange(numSimulations):
 
         # Generate arbitrary boundary:
-        x1, y1 = (b - a) * np.random.rand(d) + a
-        x2, y2 = (b - a) * np.random.rand(d) + a
+        p1 = np.concatenate([np.array([1]), (b - a) * np.random.rand(d) + a])
+        p2 = np.concatenate([np.array([1]), (b - a) * np.random.rand(d) + a])
 
         # Generate data-set:
-        X = (b - a) * np.random.rand(N, d) + a
-        y = np.array([label(X[j], x1, x2, y1, y2) for j in xrange(N)])
+        X = np.column_stack((np.ones((N, 1)), (b - a) * np.random.rand(N, d) + a))
+        y = np.array([f(X[j,:], p1, p2) for j in xrange(N)])
 
         # Train using closed-form linear regression:
         X_dagger = np.dot(linalg.inv(np.dot(X.T, X)), X.T)
@@ -48,54 +45,50 @@ def runSimulations(numSimulations, N, N_test):
 
         # Estimate target hypothesis and calculate in-sample error:
         g = np.vectorize(sign)(np.dot(X, w))
-        E_in = np.average(y - g)
+        E_in = np.average(sign(abs(g-y)))
         E_ins += [E_in]
 
         # Generate testing data-set:
-        X_test = (b - a) * np.random.rand(N_test, d) + a
-        y_test = np.array([label(X_test[j], x1, x2, y1, y2) for j in xrange(N_test)])
+        X_test = np.column_stack((np.ones((N_test, 1)), (b - a) * np.random.rand(N_test, d) + a))
+        y_test = np.array([f(X_test[j,:], p1, p2) for j in xrange(N_test)])
 
         # Apply target hypothese and calculate out-of-sample error:
         g_test = np.vectorize(sign)(np.dot(X_test,w))
-        E_out = np.average(y_test - g_test)
+        E_out = np.average(sign(abs(g_test-y_test)))
         E_outs += [E_out]
 
         if (i == (numSimulations - 1)):
             # Apply PLA after having calculated w using linear regression (which should speed up convergence):
-            perceptronLearningAlgorithm(1000, 10, x1, x2, y1, y2, w)
+            perceptronLearningAlgorithm(1000, 10, p1, p2, w)
             
             # Plot classification boundary and points:
-            plot(X, y, x1, x2, y1, y2)
+            plot(X, y, p1, p2)
 
     return (E_ins, E_outs)
 
-def perceptronLearningAlgorithm(numSimulations, N, x1, x2, y1, y2, w = None, maxIter = 10):
-    print('Started running PLA...')
+def perceptronLearningAlgorithm(numSimulations, N, p1, p2, w = None, maxIter = 10000):
+    print('Started PLA (%i simulations)...' % numSimulations)
     iters = []
     for _ in xrange(numSimulations):
         # Generate data-set:
-        X = (b - a) * np.random.rand(N, d) + a
-        y = np.array([label(X[j], x1, x2, y1, y2) for j in xrange(N)])
+        X = np.column_stack((np.ones((N, 1)), (b - a) * np.random.rand(N, d) + a))
+        y = np.array([f(X[j,:], p1, p2) for j in xrange(N)])
 
         hasMisclassifiedSample = True
         iter = 0
         while (hasMisclassifiedSample and (iter < maxIter)):
             hasMisclassifiedSample = False
-            for i in xrange(X.shape[0]):
+            for i in xrange(N):
                 if (y[i] != sign(np.dot(X[i], w))):
                     hasMisclassifiedSample = True
                     w = w + y[i] * X[i]
             iter += 1
         iters += [iter]
-    avg_iter = np.average(iters)
-    print('PLA converged in %0.5f iterations (for %i runs)' % (avg_iter, numSimulations))
-    print('PLA convergence overview: %s' % iters)
+    print('PLA converged in %0.5f iteration(s) (min=%i, max=%i)' % (np.average(iters), np.min(iters), np.max(iters)))
     return iters
 
-print('Started linear regression simulation...')
+print('Started Linear Regression (%i simulations)...' % numSimulations)
 E_ins, E_outs = runSimulations(numSimulations, N, N_test)
-E_in_avg = np.average(E_ins)
-E_out_avg = np.average(E_outs)
-print('In-sample error:     %0.5f' % E_in_avg)
-print('Out-of-sample error: %0.5f' % E_out_avg)
+print('In-sample error:     avg=%0.5f, min=%0.5f, max=%0.5f, median=%0.5f' % (np.average(E_ins), np.min(E_ins), np.max(E_ins), np.median(E_ins)))
+print('Out-of-sample error: avg=%0.5f, min=%0.5f, max=%0.5f, median=%0.5f' % (np.average(E_outs), np.min(E_outs), np.max(E_outs), np.median(E_outs)))
 
